@@ -68,4 +68,3 @@ def aplicar_amend_con_ia():
 
 if __name__ == '__main__':
     aplicar_amend_con_ia()
-  
