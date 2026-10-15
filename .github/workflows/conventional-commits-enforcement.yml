@@ -1,0 +1,40 @@
+name: Git History Governance - AI Conventional Commits
+
+on:
+  workflow_call:
+    secrets:
+      GEMINI_API_KEY:
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  standardize-history:
+    name: AI Commit Normalization
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python Runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install google-genai
+
+      - name: Configure Git Author Identity
+        run: |
+          git config --global user.name "AI Governance Bot"
+          git config --global user.email "ai-bot@organization.internal"
+
+      - name: Execute AI Commit Normalization Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python .github/scripts/conventional_agent.py
+        
