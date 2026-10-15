@@ -14,11 +14,18 @@ jobs:
     name: AI Commit Normalization
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout Target Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout Central Workflows Repository
+        uses: actions/checkout@v4
+        with:
+          repository: TechECS/org-ci-workflows
+          token: ${{ secrets.GH_PAT_OR_GITHUB_TOKEN }} # O usa tu token estándar si es público/privado dentro de la org
+          path: temp-central-repo
 
       - name: Set up Python Runtime
         uses: actions/setup-python@v5
@@ -36,5 +43,4 @@ jobs:
       - name: Execute AI Commit Normalization Agent
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python .github/scripts/conventional_agent.py
-        
+        run: python temp-central-repo/.github/scripts/conventional_agent.py
