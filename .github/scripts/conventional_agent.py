@@ -33,7 +33,7 @@ def generar_mensaje_con_ia(diff_texto):
     """
     
     response = client.models.generate_content(
-        model='gemini-3.5-lite',
+        model='gemini-3.5-flash',
         contents=prompt,
     )
     return response.text.strip()
