@@ -2,9 +2,6 @@ name: Git History Governance - AI Conventional Commits
 
 on:
   workflow_call:
-    secrets:
-      GEMINI_API_KEY:
-        required: true
 
 permissions:
   contents: write
@@ -24,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: TechECS/org-ci-workflows
-          token: ${{ secrets.GH_PAT_OR_GITHUB_TOKEN }} # O usa tu token estándar si es público/privado dentro de la org
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: temp-central-repo
 
       - name: Set up Python Runtime
@@ -42,5 +39,7 @@ jobs:
 
       - name: Execute AI Commit Normalization Agent
         env:
+          # Aquí se lee directamente el secret de la organización heredado
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python temp-central-repo/.github/scripts/conventional_agent.py
+        
