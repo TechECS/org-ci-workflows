@@ -33,9 +33,10 @@ def generar_mensaje_con_ia(diff_texto):
     {diff_texto}
     """
     
-    # Configuración de reintentos ante saturación del servidor (Rate Limits / Server Errors)
-    max_intentos = 5
-    tiempo_espera = 4  # Segundos iniciales de espera
+    # Intentos controlados con los tiempos de espera solicitados:
+    # Intento 1 -> Falla -> Espera 5 minutos (300 segundos) -> Intento 2 -> Falla -> Espera 10 minutos (600 segundos) -> Intento 3 (Último)
+    tiempos_espera = [300, 600] 
+    max_intentos = len(tiempos_espera) + 1
     
     for intento in range(1, max_intentos + 1):
         try:
@@ -47,14 +48,16 @@ def generar_mensaje_con_ia(diff_texto):
                 return response.text.strip()
         except Exception as e:
             print(f"Aviso: Intento {intento}/{max_intentos} fallido al conectar con Gemini. Motivo: {str(e)}")
-            if intento == max_intentos:
-                raise RuntimeError("Se agotaron todos los reintentos debido a la alta saturación de los servidores de Gemini.")
             
-            print(f"Esperando {tiempo_espera} segundos antes de reintentar para dejar que el servidor se desature...")
-            time.sleep(tiempo_espera)
-            tiempo_espera *= 2  # Duplica el tiempo de espera en cada intento (backoff exponencial)
+            if intento == max_intentos:
+                raise RuntimeError("Se agotaron todos los reintentos (tras las esperas de 5 y 10 minutos) debido a la saturación de los servidores.")
+            
+            tiempo_actual_segundos = tiempos_espera[intento - 1]
+            minutos = tiempo_actual_segundos // 60
+            print(f"Esperando {minutos} minutos antes del siguiente intento para dejar que los servidores se desaturen...")
+            time.sleep(tiempo_actual_segundos)
 
-    raise RuntimeError("No se pudo generar el mensaje con la IA tras varios intentos.")
+    raise RuntimeError("No se pudo generar el mensaje con la IA tras agotar los reintentos.")
 
 def aplicar_amend_con_ia():
     try:
@@ -71,7 +74,7 @@ def aplicar_amend_con_ia():
             print("No se encontraron cambios en el diff para analizar.")
             return
 
-        print("Generando mensaje estructurado mediante IA con reintentos automáticos...")
+        print("Generando mensaje estructurado mediante IA con política de espera (5m y 10m)...")
         mensaje_completo = generar_mensaje_con_ia(diff_texto)
 
         # Actualizar el repositorio local y remoto con el nuevo mensaje
@@ -86,3 +89,4 @@ def aplicar_amend_con_ia():
 
 if __name__ == '__main__':
     aplicar_amend_con_ia()
+    
