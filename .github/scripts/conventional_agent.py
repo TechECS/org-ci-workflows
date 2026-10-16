@@ -1,4 +1,5 @@
 import os
+import time
 import subprocess
 from google import genai
 
@@ -32,11 +33,28 @@ def generar_mensaje_con_ia(diff_texto):
     {diff_texto}
     """
     
-    response = client.models.generate_content(
-        model='gemini-3.5-flash',
-        contents=prompt,
-    )
-    return response.text.strip()
+    # Configuración de reintentos ante saturación del servidor (Rate Limits / Server Errors)
+    max_intentos = 5
+    tiempo_espera = 4  # Segundos iniciales de espera
+    
+    for intento in range(1, max_intentos + 1):
+        try:
+            response = client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=prompt,
+            )
+            if response and response.text:
+                return response.text.strip()
+        except Exception as e:
+            print(f"Aviso: Intento {intento}/{max_intentos} fallido al conectar con Gemini. Motivo: {str(e)}")
+            if intento == max_intentos:
+                raise RuntimeError("Se agotaron todos los reintentos debido a la alta saturación de los servidores de Gemini.")
+            
+            print(f"Esperando {tiempo_espera} segundos antes de reintentar para dejar que el servidor se desature...")
+            time.sleep(tiempo_espera)
+            tiempo_espera *= 2  # Duplica el tiempo de espera en cada intento (backoff exponencial)
+
+    raise RuntimeError("No se pudo generar el mensaje con la IA tras varios intentos.")
 
 def aplicar_amend_con_ia():
     try:
@@ -53,7 +71,7 @@ def aplicar_amend_con_ia():
             print("No se encontraron cambios en el diff para analizar.")
             return
 
-        print("Generando mensaje estructurado mediante IA...")
+        print("Generando mensaje estructurado mediante IA con reintentos automáticos...")
         mensaje_completo = generar_mensaje_con_ia(diff_texto)
 
         # Actualizar el repositorio local y remoto con el nuevo mensaje
@@ -64,7 +82,7 @@ def aplicar_amend_con_ia():
         subprocess.run(['git', 'push', 'origin', f'HEAD:{branch}', '--force'], check=True)
         print("¡Historial normalizado y commit modificado con éxito!")
     except Exception as e:
-        print(f"Aviso en la ejecución del agente de IA: {str(e)}")
+        print(f"Error crítico en la ejecución del agente de IA: {str(e)}")
 
 if __name__ == '__main__':
     aplicar_amend_con_ia()
